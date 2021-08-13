@@ -1,0 +1,75 @@
+name: Create and publish a Docker image
+
+on:
+  schedule:
+    - cron: '36 10 * * *' # everyday at 10:36am
+  push:
+    branches: ['main']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - osrm-version: v5.22.0
+            osrm-profile: car
+          - osrm-version: latest
+            osrm-profile: car
+          - osrm-version: v5.22.0
+            osrm-profile: rail
+          - osrm-version: latest
+            osrm-profile: rail
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            jxeeno/osrm-with-data
+            ghcr.io/jxeeno/osrm-with-data
+          # generate Docker tags based on the following events/attributes
+          flavor: |
+            prefix=${{matrix.osrm-profile}}
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern=${{matrix.osrm-version}}
+            type=sha
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to Github repository
+        uses: docker/login-action@v1 
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        env:
+          OSRM_VERSION: ${{matrix.osrm-version}}
+          OSRM_PROFILE: ${{matrix.osrm-profile}}
+        with:
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
