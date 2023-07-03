@@ -75,27 +75,27 @@ function setup()
     },
 
     access_tag_blacklist = Set {
-      'no',
-      'agricultural',
-      'forestry',
-      'emergency',
-      'psv',
-      'customers',
-      'private',
-      'delivery',
-      'destination'
+      'no' -- ,
+      -- 'agricultural',
+      -- 'forestry',
+      -- 'emergency',
+      -- 'psv',
+      -- 'customers',
+      -- 'private',
+      -- 'delivery',
+      -- 'destination'
     },
 
     -- tags disallow access to in combination with highway=service
     service_access_tag_blacklist = Set {
-        'private'
+        -- 'private'
     },
 
     restricted_access_tag_list = Set {
-      'private',
-      'delivery',
-      'destination',
-      'customers',
+      -- 'private',
+      -- 'delivery',
+      -- 'destination',
+      -- 'customers',
     },
 
     access_tags_hierarchy = Sequence {
