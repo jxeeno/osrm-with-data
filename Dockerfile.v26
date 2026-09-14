@@ -1,0 +1,25 @@
+# OSRM v26+ with Australian routing data baked in (OSRM_PROFILE=car|rail).
+# Built by the build-v26 job in .github/workflows/build.yaml.
+#
+# The original Dockerfile (OSRM v5.22 car, tags car*) is intentionally left
+# unchanged for existing consumers.
+#
+#   docker build -f Dockerfile.v26 --build-arg OSRM_PROFILE=rail -t osrm-rail .
+ARG OSRM_IMAGE=ghcr.io/project-osrm/osrm-backend:v26.9.0-debian
+
+# Build stage: the ~1 GB source extract stays here and never reaches the final image.
+FROM ${OSRM_IMAGE} AS build
+ARG OSRM_PROFILE=car
+WORKDIR /data
+ADD https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf /data/australia-latest.osm.pbf
+COPY config/driving_side.geojson /data/driving_side.geojson
+# car uses the image's stock /opt/car.lua; config/car.lua is the v5.22-era profile.
+COPY config/rail.lua /opt/rail.lua
+RUN osrm-extract -p /opt/${OSRM_PROFILE}.lua --location-dependent-data /data/driving_side.geojson /data/australia-latest.osm.pbf \
+ && osrm-partition /data/australia-latest.osrm \
+ && osrm-customize /data/australia-latest.osrm
+
+FROM ${OSRM_IMAGE}
+COPY --from=build /data/australia-latest.osrm* /data/
+EXPOSE 5000
+ENTRYPOINT ["osrm-routed", "--max-matching-size", "3000", "--algorithm", "mld", "/data/australia-latest.osrm"]
